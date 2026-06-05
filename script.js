@@ -121,7 +121,7 @@ class GameController {
             console.log("Base de doenças carregada com sucesso!");
             
             this.elements.btnStart.disabled = false;
-            this.elements.btnStart.textContent = "Iniciar Game";
+            this.elements.btnStart.textContent = "Iniciar Jogo";
         } catch (error) {
             console.error("Erro ao carregar os dados:", error);
             this.showToast("Erro ao carregar doenças! Você precisa usar um Servidor Local (ex: Live Server).");
