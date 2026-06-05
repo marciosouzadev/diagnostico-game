@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico em 60 Segundos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Controle de Tema -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar modo escuro">
+        <span class="icon" id="theme-icon">🌙</span>
+    </button>
+
+    <div class="app-container">
+        
+        <!-- TELA INICIAL -->
+        <div id="start-screen" class="screen active">
+            <div class="hero-section">
+                <span class="hero-icon">🩺</span>
+                <h1 class="hero-title">Diagnóstico em 60s</h1>
+                <p class="hero-subtitle">Teste seus conhecimentos médicos! Identifique a doença correta baseada no caso clínico antes que o tempo acabe.</p>
+            </div>
+            
+            <div class="game-features">
+                <div class="feature">⚡ Partidas rápidas de 10 questões</div>
+                <div class="feature">⏱️ 60 segundos por diagnóstico</div>
+                <div class="feature">🏆 Conquiste medalhas</div>
+            </div>
+
+            <button id="btn-start" class="btn btn-primary btn-large">Iniciar Game</button>
+        </div>
+
+        <!-- TELA DO JOGO -->
+        <div id="game-screen" class="screen hidden">
+            <header class="app-header">
+                <div class="header-top">
+                    <h1 class="game-title">Diagnóstico em 60s</h1>
+                    <div class="game-stats">
+                        <div class="stat-badge score" id="score-display" aria-label="Pontuação">
+                            <span class="icon">🏆</span> <span id="current-score">0</span> pts
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-wrapper">
+                    <div class="progress-info">
+                        <span id="question-counter">Questão 1/10</span>
+                        <span class="stat-badge round-score">
+                            <span id="round-score">100</span> pts
+                        </span>
+                        <span class="stat-badge timer" id="timer-display" aria-live="assertive">
+                            <span class="icon">⏱</span> <span id="time-left">60</span>s
+                        </span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="game-board">
+                <section class="clinical-case-card">
+                    <div class="card-header">
+                        <h2 class="section-title">Caso Clínico</h2>
+                        <span id="level-badge" class="badge level-badge">Nível</span>
+                    </div>
+                    <p id="clinical-case-text" class="case-text">O caso clínico será carregado aqui...</p>
+                </section>
+
+                <!-- Nova Seção de Investigação -->
+                <section class="investigation-area">
+                    <h3 class="section-subtitle">Investigação Clínica</h3>
+                    <div class="investigation-grid">
+                        <button class="btn btn-investigate" data-type="sintomas" data-cost="10" data-name="Sintomas">
+                            <span class="icon">🔍</span> Sintomas <span class="cost">-10</span>
+                        </button>
+                        <button class="btn btn-investigate" data-type="exames" data-cost="15" data-name="Exames">
+                            <span class="icon">🔬</span> Exames <span class="cost">-15</span>
+                        </button>
+                        <button class="btn btn-investigate" data-type="historicoFamiliar" data-cost="10" data-name="Histórico Familiar">
+                            <span class="icon">👨‍👩‍👧</span> Histórico <span class="cost">-10</span>
+                        </button>
+                        <button class="btn btn-investigate" data-type="exameFisico" data-cost="15" data-name="Exame Físico">
+                            <span class="icon">🩺</span> Físico <span class="cost">-15</span>
+                        </button>
+                    </div>
+                    <div id="clues-container" class="clues-container" aria-live="polite"></div>
+                </section>
+
+                <section class="interaction-area">
+                    <!-- Container de Múltipla Escolha -->
+                    <div id="options-container" class="options-container" aria-live="polite">
+                        <!-- Os botões das alternativas serão inseridos aqui pelo JavaScript -->
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button id="btn-submit" class="btn btn-primary">Responder</button>
+                        <button id="btn-next" class="btn btn-secondary" disabled>Próxima</button>
+                    </div>
+                </section>
+
+                <div id="feedback-area" class="feedback-area hidden" aria-live="polite"></div>
+            </main>
+        </div>
+
+        <!-- TELA DE RESULTADOS -->
+        <div id="end-screen" class="screen hidden">
+            <div class="results-container">
+                <h2 class="results-title">Fim de Plantão!</h2>
+                
+                <div class="medal-showcase" id="medal-container">
+                    <div class="medal-icon" id="medal-icon">🏅</div>
+                    <h3 class="medal-title" id="medal-title">Medalha</h3>
+                </div>
+
+                <div class="results-stats">
+                    <div class="result-item">
+                        <span class="result-label">Pontuação Final</span>
+                        <span class="result-value" id="final-score">0</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Acertos</span>
+                        <span class="result-value" id="final-correct">0/10</span>
+                    </div>
+                </div>
+
+                <button id="btn-restart" class="btn btn-primary btn-large">Jogar Novamente</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Créditos do Desenvolvedor -->
+    <footer class="developer-credits">
+        Desenvolvido por Marcio Souza | Nutricionista
+    </footer>
+
+    <!-- Container para avisos flutuantes (Toasts) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
