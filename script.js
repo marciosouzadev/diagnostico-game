@@ -1,9 +1,6 @@
 /**
- * Diagnóstico em 60 Segundos
- * Estrutura inicial do controlador do jogo.
- * 
- * Arquitetura baseada em classes para encapsular o estado e os comportamentos,
- * facilitando a manutenção e seguindo princípios de Clean Code.
+ * Matemática em 60s: Salve a Cidade dos Números!
+ * Controlador refatorado para a nova temática educacional.
  */
 
 class GameController {
@@ -14,20 +11,16 @@ class GameController {
             timeLeft: 60,
             currentCase: null,
             isPlaying: false,
-            diseases: [],
-            availableDiseases: [], 
+            questions: [],
+            availableQuestions: [], 
             questionsPerGame: 10,
             currentQuestionIndex: 0,
             correctAnswers: 0,
-            roundScore: 100,
-            cluesUsed: 0,
-            currentClues: {
-                sintomas: [],
-                exames: [],
-                historicoFamiliar: [],
-                exameFisico: []
-            },
-            selectedOption: null
+            lives: 3,
+            combo: 0,
+            maxCombo: 0,
+            selectedOption: null,
+            playerName: ''
         };
 
         // Cache de elementos do DOM
@@ -40,32 +33,49 @@ class GameController {
             // Tema
             themeToggle: document.getElementById('theme-toggle'),
             themeIcon: document.getElementById('theme-icon'),
-            
+
             // Progresso e Header
             timeLeftDisplay: document.getElementById('time-left'),
             scoreDisplay: document.getElementById('current-score'),
             questionCounter: document.getElementById('question-counter'),
-            roundScoreDisplay: document.getElementById('round-score'),
             progressBar: document.getElementById('progress-bar'),
             
             // Interação Jogo
-            levelBadge: document.getElementById('level-badge'),
-            caseText: document.getElementById('clinical-case-text'),
+            worldBadge: document.getElementById('world-badge'),
+            categoryBadge: document.getElementById('category-badge'),
+            introText: document.getElementById('intro-text'),
+            questionText: document.getElementById('question-text'),
             optionsContainer: document.getElementById('options-container'),
+            playerNameInput: document.getElementById('player-name'),
             btnStart: document.getElementById('btn-start'),
+            btnHowTo: document.getElementById('btn-how-to'),
+            btnRanking: document.getElementById('btn-ranking'),
+            btnHint: document.getElementById('btn-hint'),
             btnSubmit: document.getElementById('btn-submit'),
             btnNext: document.getElementById('btn-next'),
             btnRestart: document.getElementById('btn-restart'),
+            hintBox: document.getElementById('hint-box'),
+            hintText: document.getElementById('hint-text'),
+            btnCloseHint: document.getElementById('btn-close-hint'),
             feedbackArea: document.getElementById('feedback-area'),
-            cluesContainer: document.getElementById('clues-container'),
-            investigateButtons: document.querySelectorAll('.btn-investigate'),
             toastContainer: document.getElementById('toast-container'),
             
+            // Modais
+            modalContainer: document.getElementById('modal-container'),
+            btnCloseModal: document.getElementById('btn-close-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalBody: document.getElementById('modal-body'),
+
             // Resultados
+            endTitle: document.getElementById('end-title'),
+            endPlayerName: document.getElementById('end-player-name'),
             medalIcon: document.getElementById('medal-icon'),
             medalTitle: document.getElementById('medal-title'),
             finalScore: document.getElementById('final-score'),
-            finalCorrect: document.getElementById('final-correct')
+            finalCorrect: document.getElementById('final-correct'),
+            finalStats: document.getElementById('final-stats'),
+            livesDisplay: document.getElementById('lives-display'),
+            comboDisplay: document.getElementById('combo-display')
         };
 
         this.timerInterval = null;
@@ -77,7 +87,7 @@ class GameController {
     async init() {
         this.initTheme();
         this.bindEvents();
-        await this.loadDiseasesData();
+        await this.loadQuestionsData();
     }
 
     /**
@@ -86,47 +96,37 @@ class GameController {
     bindEvents() {
         this.elements.themeToggle.addEventListener('click', () => this.toggleTheme());
         this.elements.btnStart.addEventListener('click', () => this.startGame());
+        this.elements.btnHint.addEventListener('click', () => this.showHint());
         this.elements.btnSubmit.addEventListener('click', () => this.handleAnswerSubmit());
         this.elements.btnNext.addEventListener('click', () => this.loadNextQuestion());
         this.elements.btnRestart.addEventListener('click', () => this.startGame());
 
-        // Configura eventos para os botões de investigação
-        this.elements.investigateButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const button = e.currentTarget;
-                const type = button.dataset.type;
-                const cost = parseInt(button.dataset.cost);
-                const name = button.dataset.name;
-                this.investigate(type, cost, name, button);
-            });
-        });
-    }
+        // Modais e dicas
+        this.elements.btnHowTo.addEventListener('click', () => this.openModal("📖 Como Jogar", "<p>1. Você tem 60 segundos para responder cada missão.</p><p>2. Cada acerto vale 100 pontos.</p><p>3. Respostas consecutivas corretas geram <strong>Combos</strong>, multiplicando sua glória!</p><p>4. Você possui 3 vidas (❤️). Erros descontam vidas.</p><p>5. Use a 💡 Dica se precisar, ela ficará na tela, mas o tempo continuará correndo!</p>"));
+        this.elements.btnRanking.addEventListener('click', () => this.showRanking());
+        this.elements.btnCloseModal.addEventListener('click', () => this.closeModal());
+        this.elements.btnCloseHint.addEventListener('click', () => this.elements.hintBox.classList.add('hidden'));
 
-    /**
-     * Carrega a base de dados de doenças do arquivo JSON
-     */
-    async loadDiseasesData() {
-        // Desabilita o botão enquanto carrega
-        this.elements.btnStart.disabled = true;
-        this.elements.btnStart.textContent = "Carregando casos...";
-        
-        try {
-            // Utilizamos fetch para buscar o arquivo JSON
-            // Lembre-se: é necessário rodar a aplicação em um servidor local (ex: Live Server no VSCode)
-            const response = await fetch('data/diseases.json');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+        // Atalhos de teclado
+        document.addEventListener('keydown', (e) => {
+            if (!this.state.isPlaying) return;
+
+            if (['1', '2', '3', '4'].includes(e.key)) {
+                const index = parseInt(e.key) - 1;
+                const buttons = this.elements.optionsContainer.querySelectorAll('.btn-option');
+                if (buttons[index] && !buttons[index].disabled) {
+                    this.selectOption(buttons[index], buttons[index].dataset.value);
+                }
+            } else if (e.key === 'Enter') {
+                if (!this.elements.btnSubmit.classList.contains('hidden') && !this.elements.btnSubmit.disabled) {
+                    this.handleAnswerSubmit();
+                } else if (!this.elements.btnNext.classList.contains('hidden') && !this.elements.btnNext.disabled) {
+                    this.loadNextQuestion();
+                }
+            } else if (e.key === 'Escape') {
+                this.showToast("⏸️ Jogo Pausado (Simulação)");
             }
-            this.state.diseases = await response.json();
-            console.log("Base de doenças carregada com sucesso!");
-            
-            this.elements.btnStart.disabled = false;
-            this.elements.btnStart.textContent = "Iniciar Jogo";
-        } catch (error) {
-            console.error("Erro ao carregar os dados:", error);
-            this.showToast("Erro ao carregar doenças! Você precisa usar um Servidor Local (ex: Live Server).");
-            this.elements.btnStart.textContent = "Erro de Conexão";
-        }
+        });
     }
 
     /**
@@ -134,11 +134,11 @@ class GameController {
      */
     initTheme() {
         const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        if (savedTheme === 'dark') {
             document.body.setAttribute('data-theme', 'dark');
             this.elements.themeIcon.textContent = '☀️';
+        } else {
+            this.elements.themeIcon.textContent = '🌙';
         }
     }
 
@@ -159,92 +159,106 @@ class GameController {
     }
 
     /**
+     * Carrega a base de dados de questões de matemática
+     */
+    async loadQuestionsData() {
+        this.elements.btnStart.disabled = true;
+        this.elements.btnStart.textContent = "Carregando mundos...";
+        
+        try {
+            const response = await fetch('data/math_questions.json');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            this.state.questions = await response.json();
+            
+            this.elements.btnStart.disabled = false;
+            this.elements.btnStart.textContent = "▶ Começar aventura";
+        } catch (error) {
+            console.error("Erro ao carregar os dados:", error);
+            this.showToast("Erro ao carregar as missões! Verifique o Live Server.");
+            this.elements.btnStart.textContent = "Erro de Conexão";
+        }
+    }
+
+    /**
      * Inicia o fluxo principal do jogo
      */
     startGame() {
-        if (this.state.diseases.length === 0) {
-            this.showToast("⚠️ Falha ao iniciar: Banco de doenças não carregado. Verifique o Live Server.");
+        const name = this.elements.playerNameInput.value.trim();
+        if (!name) {
+            this.showToast("⚠️ Por favor, insira seu nome de explorador antes de começar!");
+            this.elements.playerNameInput.focus();
+            return;
+        }
+        this.state.playerName = name;
+
+        if (this.state.questions.length === 0) {
+            this.showToast("⚠️ Banco de missões vazio!");
             return;
         }
 
+        this.state.isPlaying = true;
         this.state.score = 0;
         this.state.currentQuestionIndex = 0;
         this.state.correctAnswers = 0;
+        this.state.lives = 3;
+        this.state.combo = 0;
+        this.state.maxCombo = 0;
         
-        // Clona a lista de doenças para podermos remover as já sorteadas do novo array
-        this.state.availableDiseases = [...this.state.diseases];
+        this.state.availableQuestions = [...this.state.questions];
         
         this.showScreen('game');
         this.updateScoreDisplay();
+        this.updateLivesDisplay();
+        this.updateComboDisplay();
         this.loadNextQuestion();
     }
 
     /**
-     * Carrega um novo caso clínico na interface
+     * Carrega a próxima fase na interface
      */
     loadNextQuestion() {
-        // Verifica se atingiu o limite de perguntas do round ou se acabaram as doenças
-        if (this.state.currentQuestionIndex >= this.state.questionsPerGame || this.state.availableDiseases.length === 0) {
+        if (this.state.lives <= 0 || this.state.currentQuestionIndex >= this.state.questionsPerGame || this.state.availableQuestions.length === 0) {
             this.endGame();
             return;
         }
 
         this.state.currentQuestionIndex++;
         
-        // Inicializa estado da rodada investigativa
-        this.state.roundScore = 100;
-        this.state.cluesUsed = 0;
-        
-        // Sorteia um índice aleatório e remove a doença da lista de disponíveis
-        const randomIndex = Math.floor(Math.random() * this.state.availableDiseases.length);
-        this.state.currentCase = this.state.availableDiseases.splice(randomIndex, 1)[0];
+        const randomIndex = Math.floor(Math.random() * this.state.availableQuestions.length);
+        this.state.currentCase = this.state.availableQuestions.splice(randomIndex, 1)[0];
 
-        // Carrega pistas do caso atual de forma independente
-        this.state.currentClues = {
-            sintomas: [...(this.state.currentCase.sintomas || [])],
-            exames: [...(this.state.currentCase.exames || [])],
-            historicoFamiliar: [...(this.state.currentCase.historicoFamiliar || [])],
-            exameFisico: [...(this.state.currentCase.exameFisico || [])]
-        };
-
-        // Atualiza a interface com o novo caso clínico
         this.updateProgressDisplay();
-        this.updateRoundScoreDisplay();
-        this.elements.caseText.textContent = this.state.currentCase.casoClinico;
-        this.elements.levelBadge.textContent = this.state.currentCase.nivel;
         
-        // Reseta campo de clues
-        this.elements.cluesContainer.innerHTML = '';
+        this.elements.introText.textContent = this.state.currentCase.introducao;
+        this.elements.questionText.textContent = this.state.currentCase.pergunta;
+        this.elements.worldBadge.textContent = this.state.currentCase.mundo;
+        this.elements.categoryBadge.textContent = this.state.currentCase.categoria;
         
-        // --- Geração de Múltipla Escolha ---
         this.elements.optionsContainer.innerHTML = '';
         this.state.selectedOption = null;
         
-        const correctDisease = this.state.currentCase.nome;
+        const options = [...this.state.currentCase.opcoes].sort(() => Math.random() - 0.5);
+        const optionKeys = ['1', '2', '3', '4'];
         
-        // Pega todos os nomes exceto o correto
-        const otherDiseases = this.state.diseases
-            .map(d => d.nome)
-            .filter(name => name !== correctDisease);
-            
-        // Sorteia 4 nomes incorretos
-        const shuffledOthers = otherDiseases.sort(() => Math.random() - 0.5).slice(0, 4);
-        
-        // Junta o correto com os 4 incorretos e embaralha tudo
-        const options = [correctDisease, ...shuffledOthers].sort(() => Math.random() - 0.5);
-        
-        options.forEach(optionText => {
+        options.forEach((optionText, index) => {
             const btn = document.createElement('button');
             btn.className = 'btn-option';
-            btn.textContent = optionText;
+            btn.innerHTML = `<span class="option-key">${optionKeys[index]}</span> ${optionText}`;
+            btn.dataset.value = optionText;
             btn.onclick = () => this.selectOption(btn, optionText);
             this.elements.optionsContainer.appendChild(btn);
         });
         
-        // Reseta o estado dos botões e esconde o feedback
-        this.elements.btnSubmit.disabled = true; // Só habilita após selecionar uma alternativa
+        this.elements.btnHint.disabled = false;
+        this.elements.btnHint.classList.remove('hidden');
+        
+        this.elements.btnSubmit.disabled = true; 
+        this.elements.btnSubmit.classList.remove('hidden');
         this.elements.btnNext.disabled = true;
-        this.elements.investigateButtons.forEach(btn => btn.disabled = false);
+        this.elements.btnNext.classList.add('hidden');
+        this.elements.hintBox.classList.add('hidden');
         this.elements.feedbackArea.classList.add('hidden');
         
         // Inicia o cronômetro
@@ -267,38 +281,12 @@ class GameController {
     }
 
     /**
-     * Realiza uma ação de investigação, revelando pistas e reduzindo os pontos da rodada
+     * Mostra a dica educacional da pergunta atual
      */
-    investigate(type, cost, name, buttonElement) {
-        const cluesArray = this.state.currentClues[type];
-        
-        // Verifica se há pistas disponíveis
-        if (!cluesArray || cluesArray.length === 0) return;
-        
-        // Deduz pontuação (mínimo 0)
-        this.state.roundScore = Math.max(0, this.state.roundScore - cost);
-        this.state.cluesUsed++;
-        this.updateRoundScoreDisplay();
-
-        // Remove a primeira pista e exibe na tela
-        const clueText = cluesArray.shift();
-        
-        const clueCard = document.createElement('div');
-        clueCard.className = 'clue-card';
-        clueCard.innerHTML = `<strong>${name}:</strong> ${clueText}`;
-        
-        this.elements.cluesContainer.appendChild(clueCard);
-        
-        // Auto-scroll no container para a pista mais recente
-        clueCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-        // Notifica o jogador
-        this.showToast(`Você gastou ${cost} pontos para investigar ${name}.`);
-
-        // Desabilita o botão caso acabem as pistas daquela categoria
-        if (cluesArray.length === 0) {
-            buttonElement.disabled = true;
-        }
+    showHint() {
+        this.elements.hintText.innerHTML = `<strong>Dica de Sobrevivência:</strong> ${this.state.currentCase.dica}`;
+        this.elements.hintBox.classList.remove('hidden');
+        this.elements.btnHint.disabled = true;
     }
 
     /**
@@ -313,39 +301,55 @@ class GameController {
             return;
         }
 
-        const isCorrect = this.state.selectedOption === this.state.currentCase.nome;
+        const isCorrect = this.state.selectedOption === this.state.currentCase.resposta;
 
-        // Para o cronômetro ao responder
         this.stopTimer();
+        this.elements.btnHint.classList.add('hidden'); // Oculta botão de dica
+        this.elements.hintBox.classList.add('hidden'); // Oculta a dica ao responder
         
-        this.elements.investigateButtons.forEach(btn => btn.disabled = true);
-        
-        // Destacar visualmente os botões (Acerto e Erro)
         const allOptions = this.elements.optionsContainer.querySelectorAll('.btn-option');
         allOptions.forEach(btn => {
-            btn.disabled = true; // Trava todas as opções
-            if (btn.textContent === this.state.currentCase.nome) {
+            btn.disabled = true; 
+            if (btn.dataset.value === this.state.currentCase.resposta) {
                 btn.classList.add('correct');
             } else if (btn.classList.contains('selected')) {
                 btn.classList.add('wrong');
             }
         });
 
-        // Lógica de Acerto ou Erro
         if (isCorrect) {
-            this.state.score += this.state.roundScore; // Soma os pontos remanescentes da rodada
+            this.state.score += 100;
             this.state.correctAnswers++;
+            this.state.combo++;
+            if (this.state.combo > this.state.maxCombo) {
+                this.state.maxCombo = this.state.combo;
+            }
             this.updateScoreDisplay();
+            this.updateComboDisplay();
             this.showRoundSummary(true);
         } else {
-            this.state.roundScore = 0; // Zera a rodada em caso de erro
-            this.updateRoundScoreDisplay();
+            this.state.combo = 0;
+            this.state.lives--;
+            this.updateLivesDisplay();
+            this.updateComboDisplay();
+            
+            if (this.state.lives > 0) {
+                this.elements.gameScreen.classList.add('shake');
+                setTimeout(() => this.elements.gameScreen.classList.remove('shake'), 500);
+            }
             this.showRoundSummary(false);
         }
 
-        // Atualiza a interface para aguardar a próxima questão
-        this.elements.btnSubmit.disabled = true;
+        this.elements.btnSubmit.classList.add('hidden');
+        this.elements.btnNext.classList.remove('hidden');
         this.elements.btnNext.disabled = false;
+        
+        if (this.state.lives <= 0) {
+            this.elements.btnNext.textContent = "Ver Resultados";
+        } else {
+            this.elements.btnNext.textContent = "Próxima";
+        }
+        
         this.elements.btnNext.focus();
     }
 
@@ -388,51 +392,52 @@ class GameController {
      * Trata o evento de quando o tempo chega a zero (timeout)
      */
     handleTimeOut() {
-        // Bloqueia interações e libera botão de próxima
-        this.elements.btnSubmit.disabled = true;
-        this.elements.btnNext.disabled = false;
-        this.elements.investigateButtons.forEach(btn => btn.disabled = true);
-        this.elements.btnNext.focus();
+        this.elements.btnHint.classList.add('hidden');
+        this.elements.hintBox.classList.add('hidden');
+        this.state.combo = 0;
+        this.state.lives--;
+        this.updateLivesDisplay();
+        this.updateComboDisplay();
         
-        // Destacar a resposta correta e desabilitar botões
         const allOptions = this.elements.optionsContainer.querySelectorAll('.btn-option');
         allOptions.forEach(btn => {
             btn.disabled = true;
-            if (btn.textContent === this.state.currentCase.nome) {
+            if (btn.dataset.value === this.state.currentCase.resposta) {
                 btn.classList.add('correct');
             }
         });
         
-        this.state.roundScore = 0;
-        this.updateRoundScoreDisplay();
-        
         this.showRoundSummary(false, true);
+        
+        this.elements.btnSubmit.classList.add('hidden');
+        this.elements.btnNext.classList.remove('hidden');
+        this.elements.btnNext.disabled = false;
+        
+        if (this.state.lives <= 0) {
+            this.elements.btnNext.textContent = "Ver Resultados";
+        } else {
+            this.elements.btnNext.textContent = "Próxima";
+        }
+        
+        this.elements.btnNext.focus();
     }
 
     /**
-     * Mostra o resumo detalhado da rodada (performance de detetive médico)
+     * Mostra o feedback educacional
      */
     showRoundSummary(isCorrect, isTimeout = false) {
-        let levelName = "Diagnóstico Difícil";
-        const s = this.state.roundScore;
-        if (s >= 90) levelName = "Diagnóstico Excelente";
-        else if (s >= 70) levelName = "Diagnóstico Muito Bom";
-        else if (s >= 50) levelName = "Diagnóstico Bom";
-        else if (s >= 30) levelName = "Diagnóstico Regular";
-
-        let titleHTML = isCorrect ? '✅ Diagnóstico Correto!' : '❌ Diagnóstico Incorreto!';
+        let titleHTML = isCorrect ? '🎉 Excelente!' : '😵 Ops!';
         if (isTimeout) titleHTML = '⏰ Tempo Esgotado!';
+        if (!isCorrect && this.state.lives <= 0) titleHTML = '💔 Fim de Jogo!';
 
         const feedbackHtml = `
             <div class="round-summary">
                 <h3 class="summary-title" style="color: var(--${isCorrect ? 'success' : 'error'}-color)">
                     ${titleHTML}
                 </h3>
-                <p><strong>A Doença era:</strong> ${this.state.currentCase.nome}</p>
-                <p><strong>Desempenho:</strong> ${levelName} (${this.state.roundScore} pontos ganhos)</p>
-                <p><strong>Pistas Utilizadas:</strong> ${this.state.cluesUsed}</p>
+                ${!isCorrect ? `<p><strong>A resposta correta era:</strong> ${this.state.currentCase.resposta}</p>` : ''}
                 <hr class="summary-divider">
-                <p><strong>Explicação Clínica:</strong> ${this.state.currentCase.explicacao}</p>
+                <p><strong>Explicação:</strong> ${this.state.currentCase.explicacao}</p>
             </div>
         `;
         
@@ -440,30 +445,53 @@ class GameController {
     }
 
     /**
-     * Finaliza a partida e exibe a tela de resultados
+     * Finaliza a partida
      */
     endGame() {
+        this.state.isPlaying = false;
         this.showScreen('end');
         
+        const isVictory = this.state.lives > 0;
+        this.elements.endTitle.textContent = isVictory ? '🏆 Parabéns! Você salvou a Cidade!' : '💥 Fim de Jogo!';
+        this.elements.endTitle.style.color = isVictory ? 'var(--gold-color)' : 'var(--error-color)';
+        this.elements.endPlayerName.textContent = `Explorador(a): ${this.state.playerName}`;
+
         this.elements.finalScore.textContent = this.state.score;
         this.elements.finalCorrect.textContent = `${this.state.correctAnswers}/${this.state.questionsPerGame}`;
         
-        // Cálculo de Medalhas
-        const percentage = this.state.correctAnswers / this.state.questionsPerGame;
-        let medal = { icon: '💔', title: 'Plantão Difícil' };
+        let extraStats = `
+            <div class="result-item extra-stat">
+                <span class="result-label">Vidas Restantes</span>
+                <span class="result-value">${this.state.lives}</span>
+            </div>
+            <div class="result-item extra-stat">
+                <span class="result-label">Maior Combo</span>
+                <span class="result-value">x${this.state.maxCombo}</span>
+            </div>
+        `;
         
-        if (percentage === 1) {
-            medal = { icon: '💎', title: 'Médico Residente (Perfeito!)' };
-        } else if (percentage >= 0.8) {
-            medal = { icon: '🥇', title: 'Medalha de Ouro' };
-        } else if (percentage >= 0.6) {
-            medal = { icon: '🥈', title: 'Medalha de Prata' };
-        } else if (percentage >= 0.4) {
-            medal = { icon: '🥉', title: 'Medalha de Bronze' };
+        const existingExtra = this.elements.finalStats.querySelectorAll('.extra-stat');
+        existingExtra.forEach(el => el.remove());
+        this.elements.finalStats.insertAdjacentHTML('beforeend', extraStats);
+        
+        let medal = { icon: '💔', title: 'Explorador Novato' };
+        
+        if (isVictory) {
+            if (this.state.lives === 3 && this.state.correctAnswers === this.state.questionsPerGame) {
+                medal = { icon: '💎', title: 'Mestre da Matemática' };
+            } else if (this.state.correctAnswers >= 8) {
+                medal = { icon: '🥇', title: 'Ouro Matemático' };
+            } else if (this.state.correctAnswers >= 5) {
+                medal = { icon: '🥈', title: 'Prata Matemática' };
+            } else {
+                medal = { icon: '🥉', title: 'Bronze Matemático' };
+            }
         }
         
         this.elements.medalIcon.textContent = medal.icon;
         this.elements.medalTitle.textContent = medal.title;
+
+        this.saveRanking(); // Salva a pontuação no final do jogo
     }
 
     /**
@@ -494,11 +522,33 @@ class GameController {
         this.elements.timeLeftDisplay.textContent = this.state.timeLeft;
     }
     
-    /**
-     * Atualiza o badge do placar específico da rodada
-     */
-    updateRoundScoreDisplay() {
-        this.elements.roundScoreDisplay.textContent = this.state.roundScore;
+    updateLivesDisplay() {
+        let hearts = '';
+        for(let i=0; i<3; i++) {
+            hearts += i < this.state.lives ? '❤️' : '🖤';
+        }
+        this.elements.livesDisplay.textContent = hearts;
+    }
+
+    updateComboDisplay() {
+        if (this.state.combo >= 3) {
+            this.elements.comboDisplay.classList.remove('hidden');
+            this.elements.comboDisplay.classList.add('combo-anim');
+            
+            setTimeout(() => {
+                this.elements.comboDisplay.classList.remove('combo-anim');
+            }, 500);
+
+            if (this.state.combo >= 10) {
+                this.elements.comboDisplay.textContent = '🌟 Mestre!';
+            } else if (this.state.combo >= 5) {
+                this.elements.comboDisplay.textContent = `⚡ x${this.state.combo}`;
+            } else {
+                this.elements.comboDisplay.textContent = `🔥 x${this.state.combo}`;
+            }
+        } else {
+            this.elements.comboDisplay.classList.add('hidden');
+        }
     }
 
     /**
@@ -508,6 +558,54 @@ class GameController {
         this.elements.questionCounter.textContent = `Questão ${this.state.currentQuestionIndex}/${this.state.questionsPerGame}`;
         const progressPercent = ((this.state.currentQuestionIndex - 1) / this.state.questionsPerGame) * 100;
         this.elements.progressBar.style.width = `${progressPercent}%`;
+    }
+
+    /**
+     * Salva a pontuação do jogador atual no LocalStorage
+     */
+    saveRanking() {
+        const currentScore = {
+            name: this.state.playerName || 'Explorador',
+            score: this.state.score,
+            date: new Date().toLocaleDateString('pt-BR')
+        };
+
+        let ranking = JSON.parse(localStorage.getItem('math_ranking')) || [];
+        ranking.push(currentScore);
+        ranking.sort((a, b) => b.score - a.score); // Ordena do maior para o menor
+        ranking = ranking.slice(0, 10); // Mantém apenas o Top 10
+        
+        localStorage.setItem('math_ranking', JSON.stringify(ranking));
+    }
+
+    /**
+     * Monta e exibe o Ranking com os dados reais salvos
+     */
+    showRanking() {
+        const ranking = JSON.parse(localStorage.getItem('math_ranking')) || [];
+        let content = "";
+        if (ranking.length === 0) {
+            content = "<p style='text-align: center; margin-top: 1rem;'>Nenhum explorador concluiu a aventura ainda. Seja o primeiro!</p>";
+        } else {
+            content = "<ol style='text-align: left; margin-left: 2rem; margin-top: 1rem;'>";
+            ranking.forEach(entry => {
+                content += `<li style='margin-bottom: 0.5rem;'><strong>${entry.name}</strong> - ${entry.score} pts <span style='font-size: 0.8em; color: var(--text-muted);'>(${entry.date})</span></li>`;
+            });
+            content += "</ol>";
+        }
+        this.openModal("🏆 Ranking dos Exploradores", content);
+    }
+
+    /**
+     * Funções de Controle de Modal
+     */
+    openModal(title, content) {
+        this.elements.modalTitle.textContent = title;
+        this.elements.modalBody.innerHTML = content;
+        this.elements.modalContainer.classList.remove('hidden');
+    }
+    closeModal() {
+        this.elements.modalContainer.classList.add('hidden');
     }
 
     /**

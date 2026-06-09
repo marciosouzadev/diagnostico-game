@@ -8,7 +8,7 @@
 </head>
 <body>
     <!-- Controle de Tema -->
-    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar modo escuro">
+    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar modo claro/escuro">
         <span class="icon" id="theme-icon">🌙</span>
     </button>
 
@@ -17,28 +17,33 @@
         <!-- TELA INICIAL -->
         <div id="start-screen" class="screen active">
             <div class="hero-section">
-                <span class="hero-icon">🩺</span>
-                <h1 class="hero-title">Diagnóstico em 60s</h1>
-                <p class="hero-subtitle">Teste seus conhecimentos! Identifique a doença correta baseada no caso clínico antes que o tempo acabe.</p>
+                <span class="hero-icon">🏆</span>
+                <h1 class="hero-title">Matemática em 60s</h1>
+                <p class="hero-subtitle">Salve a Cidade dos Números!</p>
+                <p class="hero-text" style="margin-top: 1rem; color: var(--text-muted);">A Cidade dos Números está em perigo! Somente exploradores inteligentes conseguem atravessar os desafios matemáticos e recuperar o Cristal da Matemática.</p>
             </div>
             
             <div class="game-features">
-                <div class="feature">⚡ Partidas rápidas de 10 questões</div>
-                <div class="feature">⏱️ 60 segundos por diagnóstico</div>
-                <div class="feature">🏆 Conquiste medalhas</div>
+                <div class="feature">⚡ Responda rápido e faça Combos</div>
+                <div class="feature">❤️ Você tem 3 vidas na aventura</div>
+                <div class="feature">🏅 Conquiste vitórias épicas</div>
             </div>
 
-            <button id="btn-start" class="btn btn-primary btn-large">Iniciar Jogo</button>
+            <input type="text" id="player-name" class="input-name" placeholder="Digite seu nome de explorador..." maxlength="20">
+            <button id="btn-start" class="btn btn-primary btn-large" style="margin-bottom: 0.5rem;">▶ Começar aventura</button>
+            <button id="btn-how-to" class="btn btn-secondary btn-large" style="margin-bottom: 0.5rem;">📖 Como jogar</button>
+            <button id="btn-ranking" class="btn btn-secondary btn-large">🏆 Ranking</button>
         </div>
 
         <!-- TELA DO JOGO -->
         <div id="game-screen" class="screen hidden">
             <header class="app-header">
                 <div class="header-top">
-                    <h1 class="game-title">Diagnóstico em 60s</h1>
+                    <div class="game-lives" id="lives-display">❤️❤️❤️</div>
                     <div class="game-stats">
-                        <div class="stat-badge score" id="score-display" aria-label="Pontuação">
-                            <span class="icon">🏆</span> <span id="current-score">0</span> pts
+                        <div class="stat-badge combo hidden" id="combo-display">🔥 x3</div>
+                        <div class="stat-badge score" id="score-display">
+                            <span class="icon">💎</span> <span id="current-score">0</span> pts
                         </div>
                     </div>
                 </div>
@@ -46,9 +51,6 @@
                 <div class="progress-wrapper">
                     <div class="progress-info">
                         <span id="question-counter">Questão 1/10</span>
-                        <span class="stat-badge round-score">
-                            <span id="round-score">100</span> pts
-                        </span>
                         <span class="stat-badge timer" id="timer-display" aria-live="assertive">
                             <span class="icon">⏱</span> <span id="time-left">60</span>s
                         </span>
@@ -60,32 +62,13 @@
             </header>
 
             <main class="game-board">
-                <section class="clinical-case-card">
+                <section class="question-card">
                     <div class="card-header">
-                        <h2 class="section-title">Caso Clínico</h2>
-                        <span id="level-badge" class="badge level-badge">Nível</span>
+                        <span id="world-badge" class="badge world-badge">Mundo</span>
+                        <span id="category-badge" class="badge category-badge">Categoria</span>
                     </div>
-                    <p id="clinical-case-text" class="case-text">O caso clínico será carregado aqui...</p>
-                </section>
-
-                <!-- Nova Seção de Investigação -->
-                <section class="investigation-area">
-                    <h3 class="section-subtitle">Investigação Clínica</h3>
-                    <div class="investigation-grid">
-                        <button class="btn btn-investigate" data-type="sintomas" data-cost="10" data-name="Sintomas">
-                            <span class="icon">🔍</span> Sintomas <span class="cost">-10</span>
-                        </button>
-                        <button class="btn btn-investigate" data-type="exames" data-cost="15" data-name="Exames">
-                            <span class="icon">🔬</span> Exames <span class="cost">-15</span>
-                        </button>
-                        <button class="btn btn-investigate" data-type="historicoFamiliar" data-cost="10" data-name="Histórico Familiar">
-                            <span class="icon">👨‍👩‍👧</span> Histórico <span class="cost">-10</span>
-                        </button>
-                        <button class="btn btn-investigate" data-type="exameFisico" data-cost="15" data-name="Exame Físico">
-                            <span class="icon">🩺</span> Físico <span class="cost">-15</span>
-                        </button>
-                    </div>
-                    <div id="clues-container" class="clues-container" aria-live="polite"></div>
+                    <p id="intro-text" class="intro-text">Introdução...</p>
+                    <h2 id="question-text" class="question-text">Pergunta...</h2>
                 </section>
 
                 <section class="interaction-area">
@@ -95,8 +78,14 @@
                     </div>
                     
                     <div class="action-buttons">
+                        <button id="btn-hint" class="btn btn-hint">💡 Dica</button>
                         <button id="btn-submit" class="btn btn-primary">Responder</button>
-                        <button id="btn-next" class="btn btn-secondary" disabled>Próxima</button>
+                        <button id="btn-next" class="btn btn-secondary hidden">Próxima</button>
+                    </div>
+
+                    <div id="hint-box" class="hint-box hidden">
+                        <span id="hint-text"></span>
+                        <button id="btn-close-hint" class="btn-close-hint" aria-label="Fechar dica">✖</button>
                     </div>
                 </section>
 
@@ -107,14 +96,15 @@
         <!-- TELA DE RESULTADOS -->
         <div id="end-screen" class="screen hidden">
             <div class="results-container">
-                <h2 class="results-title">Fim de Plantão!</h2>
+                <h2 class="results-title" id="end-title">Fim de Jogo!</h2>
+                <p class="player-name-display" id="end-player-name"></p>
                 
                 <div class="medal-showcase" id="medal-container">
-                    <div class="medal-icon" id="medal-icon">🏅</div>
+                    <div class="medal-icon" id="medal-icon">🏆</div>
                     <h3 class="medal-title" id="medal-title">Medalha</h3>
                 </div>
 
-                <div class="results-stats">
+                <div class="results-stats" id="final-stats">
                     <div class="result-item">
                         <span class="result-label">Pontuação Final</span>
                         <span class="result-value" id="final-score">0</span>
@@ -125,20 +115,32 @@
                     </div>
                 </div>
 
-                <button id="btn-restart" class="btn btn-primary btn-large">Jogar Novamente</button>
+                <button id="btn-restart" class="btn btn-primary btn-large" style="margin-top: 1rem;">🔄 Jogar Novamente</button>
             </div>
         </div>
 
     </div>
 
-    <!-- Créditos do Desenvolvedor -->
-    <footer class="developer-credits">
-        <p>© 2026 Diagnóstico em 60s. Todos os direitos reservados.</p>
-        <p>Desenvolvido por Marcio Souza</p>
+    <!-- Créditos Escolares -->
+    <footer class="school-credits">
+        <p>© 2026 Matemática em 60s. Todos os direitos reservados.</p>
+        <p><strong>Desenvolvido por:</strong> Fernanda Machado Borges, Helen Caldonho, Maria Luiza Pereira e Ana Clara Correa Jacinto.</p>
+        <p>Estudantes do 9º 02 da EEB Prof. Elvira Faria Passos - São João do Itaperiú / SC</p>
+        <p><strong>Orientação técnica e apoio ao desenvolvimento:</strong> Marcio José de Souza</p>
+        <p class="tech-note">Desenvolvido com tecnologias HTML, CSS, JavaScript e ferramentas de Inteligência Artificial para fins educacionais.</p>
     </footer>
 
     <!-- Container para avisos flutuantes (Toasts) -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- Modais para Menu -->
+    <div id="modal-container" class="modal-container hidden">
+        <div class="modal-content">
+            <button id="btn-close-modal" class="btn-close-modal">✖</button>
+            <h2 id="modal-title">Título</h2>
+            <div id="modal-body" class="modal-body">Conteúdo</div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
