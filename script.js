@@ -52,7 +52,6 @@ class GameController {
             btnRanking: document.getElementById('btn-ranking'),
             btnHint: document.getElementById('btn-hint'),
             btnSubmit: document.getElementById('btn-submit'),
-            btnNext: document.getElementById('btn-next'),
             btnRestart: document.getElementById('btn-restart'),
             hintBox: document.getElementById('hint-box'),
             hintText: document.getElementById('hint-text'),
@@ -79,6 +78,7 @@ class GameController {
         };
 
         this.timerInterval = null;
+        this.autoNextTimeout = null;
     }
 
     /**
@@ -98,7 +98,6 @@ class GameController {
         this.elements.btnStart.addEventListener('click', () => this.startGame());
         this.elements.btnHint.addEventListener('click', () => this.showHint());
         this.elements.btnSubmit.addEventListener('click', () => this.handleAnswerSubmit());
-        this.elements.btnNext.addEventListener('click', () => this.loadNextQuestion());
         this.elements.btnRestart.addEventListener('click', () => this.startGame());
 
         // Modais e dicas
@@ -120,8 +119,6 @@ class GameController {
             } else if (e.key === 'Enter') {
                 if (!this.elements.btnSubmit.classList.contains('hidden') && !this.elements.btnSubmit.disabled) {
                     this.handleAnswerSubmit();
-                } else if (!this.elements.btnNext.classList.contains('hidden') && !this.elements.btnNext.disabled) {
-                    this.loadNextQuestion();
                 }
             } else if (e.key === 'Escape') {
                 this.showToast("⏸️ Jogo Pausado (Simulação)");
@@ -219,6 +216,12 @@ class GameController {
      * Carrega a próxima fase na interface
      */
     loadNextQuestion() {
+        // Limpa o temporizador automático caso o usuário tenha clicado antes do tempo acabar
+        if (this.autoNextTimeout) {
+            clearTimeout(this.autoNextTimeout);
+            this.autoNextTimeout = null;
+        }
+        
         if (this.state.lives <= 0 || this.state.currentQuestionIndex >= this.state.questionsPerGame || this.state.availableQuestions.length === 0) {
             this.endGame();
             return;
@@ -256,8 +259,6 @@ class GameController {
         
         this.elements.btnSubmit.disabled = true; 
         this.elements.btnSubmit.classList.remove('hidden');
-        this.elements.btnNext.disabled = true;
-        this.elements.btnNext.classList.add('hidden');
         this.elements.hintBox.classList.add('hidden');
         this.elements.feedbackArea.classList.add('hidden');
         
@@ -269,8 +270,8 @@ class GameController {
      * Marca a alternativa clicada
      */
     selectOption(clickedBtn, optionText) {
-        // Se já respondeu (btnNext tá habilitado), ignora
-        if (!this.elements.btnNext.disabled) return;
+        // Se já respondeu (temporizador rodando), ignora
+        if (this.autoNextTimeout) return;
 
         const allOptions = this.elements.optionsContainer.querySelectorAll('.btn-option');
         allOptions.forEach(btn => btn.classList.remove('selected'));
@@ -345,16 +346,12 @@ class GameController {
         }
 
         this.elements.btnSubmit.classList.add('hidden');
-        this.elements.btnNext.classList.remove('hidden');
-        this.elements.btnNext.disabled = false;
         
         if (this.state.lives <= 0) {
-            this.elements.btnNext.textContent = "Ver Resultados";
+            this.autoNextTimeout = setTimeout(() => this.endGame(), 2000); // Avança rápido
         } else {
-            this.elements.btnNext.textContent = "Próxima";
+            this.autoNextTimeout = setTimeout(() => this.loadNextQuestion(), 2000); // Avança rápido
         }
-        
-        this.elements.btnNext.focus();
     }
 
     /**
@@ -414,16 +411,12 @@ class GameController {
         this.showRoundSummary(false, true);
         
         this.elements.btnSubmit.classList.add('hidden');
-        this.elements.btnNext.classList.remove('hidden');
-        this.elements.btnNext.disabled = false;
         
         if (this.state.lives <= 0) {
-            this.elements.btnNext.textContent = "Ver Resultados";
+            this.autoNextTimeout = setTimeout(() => this.endGame(), 2000);
         } else {
-            this.elements.btnNext.textContent = "Próxima";
+            this.autoNextTimeout = setTimeout(() => this.loadNextQuestion(), 2000);
         }
-        
-        this.elements.btnNext.focus();
     }
 
     /**
@@ -472,6 +465,11 @@ class GameController {
      * Finaliza a partida
      */
     endGame() {
+        // Limpa o temporizador automático se existir
+        if (this.autoNextTimeout) {
+            clearTimeout(this.autoNextTimeout);
+            this.autoNextTimeout = null;
+        }
         this.state.isPlaying = false;
         this.showScreen('end');
         
