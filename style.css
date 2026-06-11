@@ -301,6 +301,7 @@ body {
     border-color: var(--success-color) !important;
     background-color: rgba(0, 255, 0, 0.1) !important;
     color: var(--success-color) !important;
+    animation: pulse-success 0.5s ease-in-out;
 }
 
 .btn-option.wrong {
@@ -478,6 +479,39 @@ body {
     0%, 100% { transform: translateX(0); }
     20%, 60% { transform: translateX(-5px); }
     40%, 80% { transform: translateX(5px); }
+}
+
+/* Efeito de Confetes */
+.confetti {
+    position: fixed;
+    top: -10px;
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    z-index: 9999;
+    transform: rotate(0deg);
+    animation: fall linear forwards;
+    border-radius: 2px;
+}
+
+@keyframes fall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes pulse-success {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pop {
+    animation: pop 0.4s ease-out;
+}
+@keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
 }
 
 /* Novas Entradas e Modais */

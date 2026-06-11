@@ -327,6 +327,10 @@ class GameController {
             this.updateScoreDisplay();
             this.updateComboDisplay();
             this.showRoundSummary(true);
+            this.createConfetti();
+            
+            this.elements.gameScreen.classList.add('pop');
+            setTimeout(() => this.elements.gameScreen.classList.remove('pop'), 400);
         } else {
             this.state.combo = 0;
             this.state.lives--;
@@ -442,6 +446,26 @@ class GameController {
         `;
         
         this.showFeedback(feedbackHtml, isCorrect ? 'success' : 'error');
+    }
+
+    /**
+     * Efeito visual de confete para acertos
+     */
+    createConfetti() {
+        const colors = ['#f59e0b', '#00ffcc', '#00ff00', '#008080', '#dc2626'];
+        for (let i = 0; i < 40; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = `${Math.random() * 1.5 + 1}s`;
+            confetti.style.animationDelay = `${Math.random() * 0.2}s`;
+            document.body.appendChild(confetti);
+
+            setTimeout(() => {
+                confetti.remove();
+            }, 3000);
+        }
     }
 
     /**
