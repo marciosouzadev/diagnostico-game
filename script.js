@@ -163,7 +163,8 @@ class GameController {
         this.elements.btnStart.textContent = "Carregando mundos...";
         
         try {
-            const response = await fetch('data/math_questions.json');
+            // O "?v=" com o horário atual força o navegador a limpar o cache e buscar as missões novas!
+            const response = await fetch('data/math_questions.json?v=' + new Date().getTime());
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
